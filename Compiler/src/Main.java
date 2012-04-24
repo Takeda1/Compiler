@@ -115,7 +115,7 @@ public class Main {
       inheritClass(vtables.get(vtables.size()-1),"Object");
       
       handleClass(n.nodes);
-      text += "\nmain:\n\tjal Main..new\n\tlw $t0, 8($v0)\n\tlw $t1, " + Integer.toString(vtables.get(2).locate("main")*4) + "($t0)\n\tjalr $t1\n\tli $v0, 10\n\tsyscall";
+      text += "\nmain:\n\tjal Main..new\n\tlw $t0, 8($v0)\n\tlw $t1, " + Integer.toString(vtables.get(vtables.size()-1).locate("main")*4) + "($t0)\n\tjalr $t1\n\tli $v0, 10\n\tsyscall";
       
       for (int i = 0; i < vtables.size(); i++ ) {
         data += vtables.get(i).toString();
@@ -185,7 +185,6 @@ public class Main {
         
         int att = 0;
         for (int j = 0; j < n.nodes.get(0).nodes.get(0).nodes.size(); j++) {
-          System.out.println(n.nodes.get(0).nodes.get(0).nodes.get(j).name);
           if (n.nodes.get(0).nodes.get(0).nodes.get(j).name == "attribute_init" || n.nodes.get(0).nodes.get(0).nodes.get(j).name == "attribute_no_init") {
             att++;
           }
@@ -268,7 +267,6 @@ public class Main {
         symTable.get(symTable.size()-1).put(arg.nodes.get(0).name,memory);
         text += "\tlw $t" + temp.toString() + ", " + Integer.toString(i*4) + "($sp)\n";
         text += "\tsw $t" + temp.toString() + ", " + memory+"($sp)\n";
-        System.out.println(arg.nodes.get(0).name + ":" + Integer.toString(memory));
         memory += 4;
       }
     
@@ -284,7 +282,6 @@ public class Main {
     if (node.name == "dynamic_dispatch") {
       Node n1 = handleExpression(node.nodes.get(0));
       Node n2 = node.nodes.get(1);
-      System.out.println(n2.name);
       ArrayList<Node> args = handleArguments(node.nodes.get(2));
       Integer mem = 0;
       for (int i = 0; i < args.size(); i++) {
@@ -295,7 +292,10 @@ public class Main {
           temp++;
           mem += 800;
           dataCounter++;
-        } else {
+        } else if (args.get(i).name == "plus") {
+                    text += "\tsw $s" + Integer.toString(temp) + ", temp\n";
+	        text += "\tlw $t" + temp.toString() + ", temp\n";
+        } else if (args.get(i).name != "") {
           text += "\tsw $s" + Integer.toString(temp-args.size()+i) + ", temp\n";
 	        text += "\tlw $t" + temp.toString() + ", temp\n";
         }
@@ -311,8 +311,6 @@ public class Main {
       
       int t = -2;
       for (int i = 0; i < vtables.size(); i++) {
-        System.out.println("**" + n2.name);
-        System.out.println(vtables.get(i).locate(n2.name));
         if ( vtables.get(i).locate(n2.name) >= 0) {
           t = vtables.get(i).locate(n2.name);
           break;
@@ -329,12 +327,26 @@ public class Main {
       Node n = node.nodes.get(0);
       ArrayList<Node> args = handleArguments(node.nodes.get(1));
       for (int i = 0; i < args.size(); i++){
-        if (args.get(i).name == "integer"){
+        if (args.get(i).name == "string") {
+          data += "\narg" + dataCounter.toString() + ": .asciiz \"" + args.get(i).nodes.get(0).name + "\"\n";
+          text += "\tla $t" + temp.toString() + ", arg" + dataCounter.toString() + "\n";
+          text += "\tsw $t" + temp.toString() + ", " + mem.toString() + "($sp)\n";
+          temp++;
+          mem += 800;
+          dataCounter++;
+          // hi
+        } else if (args.get(i).name == "integer"){
           text += "\tli $t" + temp.toString() + ", " + args.get(i).nodes.get(0).name + "\n";
           text += "\tsw $t" + temp.toString() + ", temp\n";
           text += "\tlw $t" + temp.toString() + ", temp\n";
         } else if (args.get(i).name == "identifier"){
           text += "\tlw $t" + temp.toString() + ", " + searchSymTable(args.get(i).nodes.get(0).name) + "($sp)\n";
+        } else if (args.get(i).name == "plus") {
+          text += "\tsw $t" + Integer.toString(temp) + ", temp\n";
+	        text += "\tlw $t" + temp.toString() + ", temp\n";
+        } else if (args.get(i).name == "if") {
+          text += "\tsw $t" + Integer.toString(temp) + ", temp\n";
+	        text += "\tlw $t" + temp.toString() + ", temp\n";
         } else {
           text += "\tsw $s" + Integer.toString(temp-args.size()+i) + ", temp\n";
 	        text += "\tlw $t" + temp.toString() + ", temp\n";
@@ -489,7 +501,6 @@ public class Main {
         text += "\tsw $t" + temp.toString() + ", " + Integer.toString(tempMem) + "($sp)\n";
       }
       if (left.name == "integer" || left.name == "identifier" || left.name == "assign") {
-        System.out.println("***");
         tempMem += 4;
       }
       Node right = handleExpression(node.nodes.get(1));
