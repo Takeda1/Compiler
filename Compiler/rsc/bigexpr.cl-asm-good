@@ -1,0 +1,199 @@
+	.data
+
+temp: .word 0
+
+Object_vtable:
+	.word Object..new
+	.word Object.copy
+
+IO_vtable:
+	.word IO..new
+	.word IO.out_string
+	.word IO.out_int
+	.word Object.copy
+
+Main_vtable:
+	.word Main..new
+	.word IO.out_string
+	.word IO.out_int
+	.word Object.copy
+	.word Main.main
+
+	.text
+
+IO..new:
+	li $a0, 12
+	li $v0, 9
+	syscall
+	la $t0, IO_vtable
+	sw $t0, 8($v0)
+	jr $ra
+
+IO.out_string:
+	lw $a0 0($sp)
+	li $v0, 4
+	syscall
+	jr $ra
+
+IO.out_int:
+	lw $a0 0($sp)
+	li $v0, 1
+	syscall
+	jr $ra
+
+Object..new:
+	jr $ra
+
+Object.copy:
+	jr $ra
+
+Main..new:
+	sw $ra, temp
+	lw $t7, temp
+	li $a0, 12
+	li $v0, 9
+	syscall
+	sw $v0, temp
+	lw $t6, temp
+	la $t0, Main_vtable
+	sw $t0, 8($v0)
+	sw $t6, temp
+	lw $v0, temp
+	jr $t7
+
+Main.main:
+	sw $ra, temp
+	lw $s6, temp
+	sw $s6, 0($gp)
+	move $t7, $v0
+	li $t0, 5
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 1000($sp)
+	li $t0, 1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 1000($sp)
+	sw $t0, 500($sp)
+	lw $t0, 1000($sp)
+	sw $t0, 504($sp)
+	li $t0, 1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 508($sp)
+	lw $t0, 504($sp)
+	lw $t1, 508($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 504($sp)
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 1000($sp)
+	sw $t0, 504($sp)
+	lw $t0, 1000($sp)
+	sw $t0, 528($sp)
+	li $t0, 6
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 532($sp)
+	lw $t0, 528($sp)
+	lw $t1, 532($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 528($sp)
+	li $t0, 7
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 524($sp)
+	lw $t0, 528($sp)
+	sw $t0, 528($sp)
+	lw $t0, 524($sp)
+	lw $t1, 528($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 524($sp)
+	li $t0, 6
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 520($sp)
+	lw $t0, 524($sp)
+	sw $t0, 524($sp)
+	lw $t0, 520($sp)
+	lw $t1, 524($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 520($sp)
+	li $t0, 5
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 516($sp)
+	lw $t0, 520($sp)
+	sw $t0, 520($sp)
+	lw $t0, 516($sp)
+	lw $t1, 520($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 516($sp)
+	li $t0, 4
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 512($sp)
+	lw $t0, 516($sp)
+	sw $t0, 516($sp)
+	lw $t0, 512($sp)
+	lw $t1, 516($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 512($sp)
+	li $t0, 3
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 508($sp)
+	lw $t0, 512($sp)
+	sw $t0, 512($sp)
+	lw $t0, 508($sp)
+	lw $t1, 512($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 508($sp)
+	lw $t0, 508($sp)
+	sw $t0, 508($sp)
+	lw $t0, 504($sp)
+	lw $t1, 508($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 504($sp)
+	lw $t0, 504($sp)
+	sw $t0, 504($sp)
+	lw $t0, 500($sp)
+	lw $t1, 504($sp)
+	add $t0, $t0, $t1
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 500($sp)
+	sw $t0, temp
+	lw $t0, temp
+	sw $t0, 0($sp)
+	lw $t0, 8($t7)
+	lw $t0, 8($t0)
+	jalr $t0
+	lw $s0, 0($sp)
+	sw $t0, 0($sp)
+	lw $s6, 0($gp)
+	jr $s6
+
+main:
+	jal Main..new
+	lw $t0, 8($v0)
+	lw $t1, 16($t0)
+	jalr $t1
+	li $v0, 10
+	syscall

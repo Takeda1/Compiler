@@ -44,6 +44,7 @@ import java.util.*;
 public class Main {
   static String cName = "";
   static Integer memory = 1000;
+  static Integer globalPointer = 0;
   static Integer tempMem = 500;
   static Integer temp = 0;
   static Integer dataCounter = 1;
@@ -261,7 +262,8 @@ public class Main {
       symTable.add(new HashMap<String,Integer>());
       text += "." + ((Node)nodes.get(0)).name + ":\n";
       text += "\tsw $ra, temp\n";
-      text += "\tlw $t6, temp\n";
+      text += "\tlw $s6, temp\n";
+      text += "\tsw $s6, " + globalPointer.toString() + "($gp)\n";
       // arguments
       for (int i = 0; i < nodes.get(0).nodes.get(0).nodes.size(); i++) {
         Node arg = nodes.get(0).nodes.get(0).nodes.get(i);
@@ -274,7 +276,9 @@ public class Main {
       text += "\tmove $t7, $v0\n";
       Node n = handleExpression( (Node)nodes.get(2) );
       text += "\tsw $t0, 0($sp)\n";
-      text += "\tjr $t6\n";
+      text += "\tlw $s6, " + globalPointer.toString() + "($gp)\n";
+      globalPointer += 4;
+      text += "\tjr $s6\n";
       temp = 0;
       symTable.remove(symTable.size()-1);
   }
@@ -347,15 +351,20 @@ public class Main {
         text += "\tsw $t" + temp.toString() + ", " + mem.toString() + "($sp)\n";
         mem += 4;
       }
+      /*
       if (n1.name == "constructor") {
         text += "\tlw $t" + temp.toString() + ", 8($v0)\n";
       } else if (n1.name == "identifier") {
         text += "\tlw $t" + temp.toString() + ", " + searchSymTable(n1.nodes.get(0).name) + "($sp)\n";
         text += "\tlw $t" + temp.toString() + ", 8($t" + temp.toString() + ")\n";
-      }
+      }*/
+      text += "\tjal " + n3.name + "..new\n";
+      text += "\tsw $v0, temp\n";
+      text += "\tlw $t" + temp.toString() + ", temp\n";
+      text += "\tlw $t" + temp.toString() + ", 8($t" + temp.toString() + ")\n";
       int t = -2;
       for (int i = 0; i < vtables.size(); i++) {
-        if ( vtables.get(i).locate(n2.name) >= 0) {
+        if ( vtables.get(i).getTableName().equals(n3.name) && vtables.get(i).locate(n2.name) >= 0) {
           t = vtables.get(i).locate(n2.name);
           break;
         }
@@ -375,7 +384,8 @@ public class Main {
           data += "\narg" + dataCounter.toString() + ": .asciiz \"" + args.get(i).nodes.get(0).name + "\"\n";
           text += "\tla $t" + temp.toString() + ", arg" + dataCounter.toString() + "\n";
           text += "\tsw $t" + temp.toString() + ", " + mem.toString() + "($sp)\n";
-          temp++;
+          
+	        temp++;
           mem += 800;
           dataCounter++;
           // hi
