@@ -52,6 +52,8 @@ public class Main {
   static String data = "\t.data\n\ntemp: .word 0\n";
   static String text = "\n\t.text\n\nIO..new:\n\tli $a0, 12\n\tli $v0, 9\n\tsyscall\n\tla $t0, IO_vtable\n\tsw $t0, 8($v0)\n\tjr $ra\n\nIO.out_string:\n\tlw $a0 0($sp)\n\tli $v0, 4\n\tsyscall\n\tjr $ra\n\nIO.out_int:\n\tlw $a0 0($sp)\n\tli $v0, 1\n\tsyscall\n\tjr $ra\n\nObject..new:\n\tjr $ra\n\nObject.copy:\n\tjr $ra\n";
   static ArrayList<Vtable> vtables = new ArrayList<Vtable>();
+  static HashMap<String,Integer> classIDS = new HashMap<String,Integer>();
+  static Integer classCounter = 2;
   
   // our output stream
   static BufferedWriter out;
@@ -107,6 +109,7 @@ public class Main {
       //symTable.add(new Map<String,Integer>());
       vtables.add(new Vtable("Object"));
       vtables.get(vtables.size()-1).put(".copy","Object");
+      classIDS.put("Object",0);
       
       // print the root and traverse through the children
       //symtable.add(new Map<String,Integer>());
@@ -114,6 +117,7 @@ public class Main {
       vtables.get(vtables.size()-1).put(".out_string","IO");
       vtables.get(vtables.size()-1).put(".out_int","IO");
       inheritClass(vtables.get(vtables.size()-1),"Object");
+      classIDS.put("IO",1);
       
       handleClass(n.nodes);
       text += "\nmain:\n\tjal Main..new\n\tlw $t0, 8($v0)\n\tlw $t1, " + Integer.toString(vtables.get(vtables.size()-1).locate("main")*4) + "($t0)\n\tjalr $t1\n\tli $v0, 10\n\tsyscall";
@@ -172,6 +176,7 @@ public class Main {
        
         symTable.add(new HashMap<String,Integer>());
         vtables.add(new Vtable(n.name));
+        classIDS.put(n.name, classCounter++);
         
         text += "\n" + n.name + "..new:\n";
         text += "\tsw $ra, temp\n";
@@ -430,6 +435,7 @@ public class Main {
       ///
     } else if (node.name == "assign") {
       Node n = handleExpression(node.nodes.get(1));
+      System.out.println(n.name);
       if (n.name == "integer"){
         text += "\tli $t" + temp.toString() + ", " + n.nodes.get(0).name + "\n";
         text += "\tsw $t" + temp.toString() + ", temp\n";
@@ -442,7 +448,19 @@ public class Main {
         text += "\tsw $t" + temp.toString() + ", temp\n";
         text += "\tlw $t" + temp.toString() + ", temp\n";
       } else if (n.name == "identifier") {
-        text += "\tlw $t" + temp.toString() + ", " + searchSymTable(n.nodes.get(0).name) + "($sp)\n";
+          if (n.nodes.get(0).name.equals("self")) {
+          text += "\tli $t" + temp.toString() + ", " + classIDS.get(cName) + "\n";
+          text += "\tsw $t" + temp.toString() + ", temp\n";
+          text += "\tlw $t" + temp.toString() + ", temp\n";
+        } else {
+          text += "\tlw $t" + temp.toString() + ", " + searchSymTable(n.nodes.get(0).name) + "($sp)\n";
+        }
+      } else if (n.name == "string") {
+        data += "\narg" + dataCounter.toString() + ": .asciiz \"" + n.nodes.get(0).name + "\"\n";
+        text += "\tla $t" + temp.toString() + ", arg" + dataCounter.toString() + "\n";
+        dataCounter++;
+        text += "\tsw $t" + temp.toString() + ", temp\n";
+        text += "\tlw $t" + temp.toString() + ", temp\n";
       }
       text += "\tsw $t" + temp.toString() + ", " + searchSymTable(node.nodes.get(0).name) + "($sp)\n";
       return node;
@@ -461,6 +479,20 @@ public class Main {
 	    for (int i = 0; i < node.nodes.get(0).nodes.size(); i++) {
 	      handleExpression(node.nodes.get(0).nodes.get(i));
 	    }
+      return node;
+    } else if (node.name == "case") {
+      Node n = handleExpression(node.nodes.get(0));
+      temp++;
+       ArrayList<Node> args = node.nodes.get(1).nodes;
+      for (int i = 0; i < args.size(); i++) {
+        text += "CASE" + i + ":\n";
+        text += "\tli $t" + temp.toString() + ", " + classIDS.get(args.get(i).nodes.get(1).name) + "\n";
+        text += "\tbne $t" + Integer.toString(temp-1) + ", $t" + Integer.toString(temp) + ", CASE" + Integer.toString(i+1) + "\n";
+        handleExpression(args.get(i).nodes.get(2));
+        temp = 1;
+      }
+        text += "CASE" + args.size() + ":\n";
+      temp--;
       return node;
       /// LET
       ///
