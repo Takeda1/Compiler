@@ -194,7 +194,6 @@ public class Main {
           text += "\tlw $v0, temp\n";
           text += "\tjr $t7\n";
         }
-        
         cName = n.name;
         handleInherit( n.nodes );
         symTable.remove(symTable.size()-1);
@@ -261,6 +260,8 @@ public class Main {
   private static void handleMethod( ArrayList<Node> nodes ) throws IOException {
       symTable.add(new HashMap<String,Integer>());
       text += "." + ((Node)nodes.get(0)).name + ":\n";
+      text += "\tsw $ra, temp\n";
+      text += "\tlw $t6, temp\n";
       // arguments
       for (int i = 0; i < nodes.get(0).nodes.get(0).nodes.size(); i++) {
         Node arg = nodes.get(0).nodes.get(0).nodes.get(i);
@@ -273,7 +274,7 @@ public class Main {
       text += "\tmove $t7, $v0\n";
       Node n = handleExpression( (Node)nodes.get(2) );
       text += "\tsw $t0, 0($sp)\n";
-      text += "\tjr $ra\n";
+      text += "\tjr $t6\n";
       temp = 0;
       symTable.remove(symTable.size()-1);
   }
@@ -309,6 +310,49 @@ public class Main {
         text += "\tlw $t" + temp.toString() + ", 8($t" + temp.toString() + ")\n";
       }
       
+      int t = -2;
+      for (int i = 0; i < vtables.size(); i++) {
+        if ( vtables.get(i).locate(n2.name) >= 0) {
+          t = vtables.get(i).locate(n2.name);
+          break;
+        }
+      }
+      t *= 4;
+      //temp++;
+      text += "\tlw $t" + temp.toString() + ", " + Integer.toString(t) + "($t" + Integer.toString(temp) + ")\n";
+      text += "\tjalr $t" + temp.toString() + "\n";
+      //temp++;
+      return n2;
+    } else if (node.name == "static_dispatch") {
+      Node n1 = handleExpression(node.nodes.get(0));
+      Node n2 = node.nodes.get(2);
+      Node n3 = node.nodes.get(1);
+      ArrayList<Node> args = handleArguments(node.nodes.get(2));
+      Integer mem = 0;
+      for (int i = 0; i < args.size(); i++) {
+        if (args.get(i).name == "string") {
+          data += "\narg" + dataCounter.toString() + ": .asciiz \"" + args.get(i).nodes.get(0).name + "\"\n";
+          text += "\tla $t" + temp.toString() + ", arg" + dataCounter.toString() + "\n";
+          text += "\tsw $t" + temp.toString() + ", " + mem.toString() + "($sp)\n";
+          temp++;
+          mem += 800;
+          dataCounter++;
+        } else if (args.get(i).name == "plus") {
+                    text += "\tsw $s" + Integer.toString(temp) + ", temp\n";
+	        text += "\tlw $t" + temp.toString() + ", temp\n";
+        } else if (args.get(i).name != "") {
+          text += "\tsw $s" + Integer.toString(temp-args.size()+i) + ", temp\n";
+	        text += "\tlw $t" + temp.toString() + ", temp\n";
+        }
+        text += "\tsw $t" + temp.toString() + ", " + mem.toString() + "($sp)\n";
+        mem += 4;
+      }
+      if (n1.name == "constructor") {
+        text += "\tlw $t" + temp.toString() + ", 8($v0)\n";
+      } else if (n1.name == "identifier") {
+        text += "\tlw $t" + temp.toString() + ", " + searchSymTable(n1.nodes.get(0).name) + "($sp)\n";
+        text += "\tlw $t" + temp.toString() + ", 8($t" + temp.toString() + ")\n";
+      }
       int t = -2;
       for (int i = 0; i < vtables.size(); i++) {
         if ( vtables.get(i).locate(n2.name) >= 0) {
@@ -394,6 +438,8 @@ public class Main {
       return node;
     } else if (node.name == "constructor") {
       text += "\tjal " + node.nodes.get(1).name + "..new\n";
+      text += "\tsw $v0, temp\n";
+      text += "\tlw $t" + temp.toString() + ", temp\n";
       return node;
     } else if (node.name == "initialize") {
       symTable.get(symTable.size()-1).put(node.nodes.get(0).name,memory);
