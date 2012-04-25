@@ -191,7 +191,7 @@ public class Main {
         
         int att = 0;
         for (int j = 0; j < n.nodes.get(0).nodes.get(0).nodes.size(); j++) {
-          if (n.nodes.get(0).nodes.get(0).nodes.get(j).name == "attribute_init" || n.nodes.get(0).nodes.get(0).nodes.get(j).name == "attribute_no_init") {
+          if (n.nodes.get(0).nodes.get(0).nodes.get(j).name == "attribute_init" ) {
             att++;
           }
         }
@@ -254,7 +254,7 @@ public class Main {
           text += "\tlw $v0, temp\n";
           text += "\tjr $t7\n";
         } else {
-          System.out.println("'" + n.name + "'");
+          //System.out.println("'" + n.name + "'");
         }
         //symTable.put(cName + "." + n.nodes.get(0).name, temp);
         temp += 4;
@@ -435,7 +435,6 @@ public class Main {
       ///
     } else if (node.name == "assign") {
       Node n = handleExpression(node.nodes.get(1));
-      System.out.println(n.name);
       if (n.name == "integer"){
         text += "\tli $t" + temp.toString() + ", " + n.nodes.get(0).name + "\n";
         text += "\tsw $t" + temp.toString() + ", temp\n";
@@ -521,6 +520,8 @@ public class Main {
       Node equality = handleExpression(node.nodes.get(0));
       if (equality.name == "le") {
         text += "\tbgt $t" + Integer.toString(temp-1) + ", $t" + Integer.toString(temp) + ", ELSE\n";
+      } else if (equality.name == "eq") {
+        text += "\tbne $t" + Integer.toString(temp-1) + ", $t" + Integer.toString(temp) + ", ELSE\n";
       }
       temp--;
       Node n1 = handleExpression(node.nodes.get(1));
@@ -545,6 +546,13 @@ public class Main {
       }
       text += "FI:\n";
 	    return node;
+    } else if (node.name == "eq") {
+      Node n1 = handleExpression(node.nodes.get(0));
+      text += "\tli $t" + temp.toString() + ", 1\n";
+      temp += 1;
+      Node n2 = handleExpression(node.nodes.get(1));
+      text += "\tli $t" + temp.toString() + ", 1\n";
+      return node;
     } else if (node.name == "le") {
       Node n1 = handleExpression(node.nodes.get(0));
       if (n1.name == "bool"){
